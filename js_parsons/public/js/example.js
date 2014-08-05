@@ -1,5 +1,6 @@
+
 function  JSParsonsXBlock(runtime, element) {
-    var parson;
+    var parson;    
 
     function displayErrors(fb) {
         if(fb.errors.length > 0) {
@@ -23,17 +24,19 @@ function  JSParsonsXBlock(runtime, element) {
         });
         $("#feedbackLink").click(function(event){
             event.preventDefault();
-            reportProgress(parson.getFeedback())
+
+            reportProgress(parson.getFeedback(), parson.user_actions)
         });
     });
 
-    function reportProgress(feedback) {        
+    function reportProgress(feedback, actions) {        
         var handlerUrl = runtime.handlerUrl(element, 'report_progress');
         $.ajax({
             type: "POST",
             url: handlerUrl,
             data: JSON.stringify({
                 "feedback": feedback,
+                "actions": actions
             }),            
             success: updateScore
         });       

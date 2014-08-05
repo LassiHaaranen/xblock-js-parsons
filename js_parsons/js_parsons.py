@@ -1,7 +1,7 @@
-import pkg_resources
+import pkg_resources, json
 from lms_mixin import LmsCompatibilityMixin
 from xblock.core import XBlock
-from xblock.fields import Scope, String, Boolean,Integer,Float
+from xblock.fields import Scope, String, Boolean,Integer,Float, List
 from xblock.fragment import Fragment
 
 class JSParsonsXBlock(XBlock, LmsCompatibilityMixin):
@@ -29,14 +29,18 @@ class JSParsonsXBlock(XBlock, LmsCompatibilityMixin):
         default=0,
         scope=Scope.user_state)
 
+    student_actions = List(
+        help="js-parsons logs for this exercise",
+        default=[],
+        scope=Scope.user_state)
+
     def student_view(self, context):
         """
         Player view, displayed to the student
         """
         html = self.resource_string('public/html/example.html')
         fragment = Fragment(html.format(self=self)) 
-
-        #Uncomment the following line when using in xblock-sdk
+        
         fragment.add_javascript_url('http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js')
         fragment.add_javascript_url(self.runtime.local_resource_url(self, 'public/js/js-parsons/lib/underscore-min.js'))
         fragment.add_javascript_url(self.runtime.local_resource_url(self, 'public/js/js-parsons/lib/lis.js'))
@@ -60,30 +64,29 @@ class JSParsonsXBlock(XBlock, LmsCompatibilityMixin):
 
     @XBlock.json_handler
     def save_problem_lines(self, data, suffix=''):
-        self.problem = data.get("problem_lines", '') 
-
+        self.instructions = data.get("problem_instructions", '') 
+        self.problem = data.get("problem_lines", '')
+       
+    
     @XBlock.json_handler
     def report_progress(self, data, suffix=''):
-        #TODO: add log handling...
         self.student_attempts += 1
+        actions = json.dumps( data.get("actions", None) )
+        self.student_actions.append(actions)
         tmp = {}        
         if len(data.get("feedback",0)) == 0: #submission is correct
             self.student_score = self.max_score()
 
-            tmp = {
-                'student_score': "{:0.1f}".format(self.student_score),
-                'student_attempts': self.student_attempts
-            }
-        else:
-            tmp = {
-                'student_score': "{:0.1f}".format(self.student_score),
-                'student_attempts': self.student_attempts
-            }
+        tmp = {
+            'student_score': "{:0.1f}".format(self.student_score),
+            'student_attempts': self.student_attempts
+        }
+
         self.runtime.publish(self,
             'grade',
             {
                 'value': self.student_score,
-                'max_value': 1.0,                
+                'max_value': self.max_score(),                
             }
         )
 
@@ -98,7 +101,6 @@ class JSParsonsXBlock(XBlock, LmsCompatibilityMixin):
              """<vertical_demo>
                 <js-parsons />
                 </vertical_demo>
-
              """),
         ]
 
